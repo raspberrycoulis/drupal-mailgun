@@ -4,7 +4,10 @@
  * Implements hook_help().
  */
 function mailgun_sender_help($route_name, \Drupal\Core\Routing\RouteMatchInterface $route_match) {
-  if ($route_name === 'mailgun_sender.test') {
-    return t('Use this form to test email sending via the Mailgun API using the configured domain and region.');
+  switch ($route_name) {
+    case 'mailgun_sender.settings':
+      return t('Configure Mailgun email settings including domain, region, and default sender.');
+    case 'mailgun_sender.test':
+      return t('Use this form to test email sending via the Mailgun API using the configured domain and region.');
   }
 }
