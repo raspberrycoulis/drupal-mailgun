@@ -26,6 +26,10 @@ class MailgunSettingsForm extends ConfigFormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config('mailgun_sender.settings');
+    $current_default = \Drupal::config('system.mail')->get('interface.default');
+    $current_default_sender = \Drupal::config('mailsystem.settings')->get('defaults.sender');
+    dump($current_default);
+    dump($current_default_sender);
 
     $form['update_api_key'] = [
       '#type' => 'checkbox',
@@ -150,23 +154,36 @@ class MailgunSettingsForm extends ConfigFormBase {
     $system_mail_config = \Drupal::configFactory()->getEditable('system.mail');
     $current_default = \Drupal::config('system.mail')->get('interface.default');
     $mailgun_config = \Drupal::configFactory()->getEditable('mailgun_sender.settings');
+    $default_system = \Drupal::configFactory()->getEditable('mailsystem.settings');
 
     if ($form_state->getValue('set_as_default')) {
-      if ($current_default !== 'mailgun_sender') {
+    if ($current_default !== 'mailgun_sender') {
         $mailgun_config->set('previous_mail_interface', $current_default)->save();
-        if ($current_default === 'smtp') {
-          $this->messenger()->addWarning($this->t('PHPMailer SMTP is currently active and will be overridden.'));
-        }
-      }
+        $mailgun_config->set('previous_mail_interface_sender', $default_system->get('defaults.sender'))->save();
+        $mailgun_config->set('previous_mail_interface_formatter', $default_system->get('defaults.formatter'))->save();
 
-      $system_mail_config->set('interface.default', 'mailgun_sender')->save();
-      $this->messenger()->addStatus($this->t('Mailgun is now set as the default mail system.'));
+        if ($current_default === 'smtp') {
+        $this->messenger()->addWarning($this->t('PHPMailer SMTP is currently active and will be overridden.'));
+        }
+    }
+
+    $system_mail_config->set('interface.default', 'mailgun_sender')->save();
+    $default_system->set('defaults.sender', 'mailgun_sender')->save();
+    $default_system->set('defaults.formatter', 'mailgun_sender')->save();
+
+    $this->messenger()->addStatus($this->t('Mailgun is now set as the default mail system.'));
     } else {
-      $previous = \Drupal::config('mailgun_sender.settings')->get('previous_mail_interface') ?? 'php_mail';
-      if ($current_default === 'mailgun_sender') {
+    $previous = $mailgun_config->get('previous_mail_interface') ?? 'php_mail';
+    $previous_sender = $mailgun_config->get('previous_mail_interface_sender') ?? 'php_mail';
+    $previous_formatter = $mailgun_config->get('previous_mail_interface_formatter') ?? 'php_mail';
+
+    if ($current_default === 'mailgun_sender') {
         $system_mail_config->set('interface.default', $previous)->save();
+        $default_system->set('defaults.sender', $previous_sender)->save();
+        $default_system->set('defaults.formatter', $previous_formatter)->save();
+
         $this->messenger()->addStatus($this->t('Mailgun has been unset. Restored previous mail system: @id.', ['@id' => $previous]));
-      }
+    }
     }
 
     parent::submitForm($form, $form_state);
