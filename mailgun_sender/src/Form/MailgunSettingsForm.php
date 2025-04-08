@@ -27,11 +27,27 @@ class MailgunSettingsForm extends ConfigFormBase {
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config('mailgun_sender.settings');
 
-    $form['api_key'] = [
+    $form['update_api_key'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Update API Key'),
+      '#default_value' => FALSE,
+      '#ajax' => [
+        'callback' => '::toggleApiKeyField',
+        'wrapper' => 'api-key-wrapper',
+      ],
+    ];
+
+    $form['api_key_wrapper'] = [
+      '#type' => 'container',
+      '#attributes' => ['id' => 'api-key-wrapper'],
+    ];
+
+    $form['api_key_wrapper']['api_key'] = [
       '#type' => 'password',
       '#title' => $this->t('Mailgun API Key'),
       '#default_value' => $config->get('api_key'),
       '#required' => TRUE,
+      '#disabled' => !$form_state->getValue('update_api_key'),
     ];
 
     $form['domain'] = [
@@ -87,9 +103,15 @@ class MailgunSettingsForm extends ConfigFormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    if (!empty($form_state->getValue('api_key'))) {
+    if ($form_state->getValue('update_api_key') && !empty($form_state->getValue('api_key'))) {
       $this->config('mailgun_sender.settings')
         ->set('api_key', $form_state->getValue('api_key'))
+        ->set('domain', $form_state->getValue('domain'))
+        ->set('region', $form_state->getValue('region'))
+        ->set('from_address', $form_state->getValue('from_address'))
+        ->save();
+    } else {
+      $this->config('mailgun_sender.settings')
         ->set('domain', $form_state->getValue('domain'))
         ->set('region', $form_state->getValue('region'))
         ->set('from_address', $form_state->getValue('from_address'))
@@ -144,6 +166,13 @@ class MailgunSettingsForm extends ConfigFormBase {
     } else {
       $this->messenger()->addError($this->t('Failed to send test email. Check the logs for more details.'));
     }
+  }
+
+  /**
+   * AJAX callback to show/hide the API key field.
+   */
+  public function toggleApiKeyField(array &$form, FormStateInterface $form_state) {
+    return $form['api_key_wrapper'];
   }
 
 }
