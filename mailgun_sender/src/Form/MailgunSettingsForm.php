@@ -30,7 +30,6 @@ class MailgunSettingsForm extends ConfigFormBase {
     $form['update_api_key'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Update API Key'),
-      '#description' => $this->t('If checked, this allows you to update the API key with a new one.'),
       '#default_value' => FALSE,
       '#ajax' => [
         'callback' => '::toggleApiKeyField',
@@ -80,7 +79,7 @@ class MailgunSettingsForm extends ConfigFormBase {
       '#type' => 'checkbox',
       '#title' => $this->t('Set Mailgun as the default mail system'),
       '#default_value' => \Drupal::config('system.mail')->get('interface.default') === 'mailgun_sender',
-      '#description' => $this->t('If checked, Mailgun will be used to send all system emails.'),
+      '#description' => $this->t('If checked, Drupal will send mail via Mailgun. Unchecking this will restore the previous mail system.'),
     ];
 
     // --- Test Email Section ---
@@ -104,26 +103,70 @@ class MailgunSettingsForm extends ConfigFormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
+    $config = $this->config('mailgun_sender.settings');
+
     if ($form_state->getValue('update_api_key') && !empty($form_state->getValue('api_key'))) {
-      $this->config('mailgun_sender.settings')
-        ->set('api_key', $form_state->getValue('api_key'))
-        ->set('domain', $form_state->getValue('domain'))
-        ->set('region', $form_state->getValue('region'))
-        ->set('from_address', $form_state->getValue('from_address'))
-        ->save();
-    } else {
-      $this->config('mailgun_sender.settings')
-        ->set('domain', $form_state->getValue('domain'))
-        ->set('region', $form_state->getValue('region'))
-        ->set('from_address', $form_state->getValue('from_address'))
-        ->save();
+      $config->set('api_key', $form_state->getValue('api_key'));
+    }
+
+    $config
+      ->set('domain', $form_state->getValue('domain'))
+      ->set('region', $form_state->getValue('region'))
+      ->set('from_address', $form_state->getValue('from_address'))
+      ->save();
+
+    // If Symfony Mailer is installed, suggest MAILER_DSN setup.
+    if (\Drupal::moduleHandler()->moduleExists('symfony_mailer')) {
+      $api_key = $form_state->getValue('api_key') ?: $config->get('api_key');
+      $domain = $form_state->getValue('domain') ?: $config->get('domain');
+      $region = $form_state->getValue('region') ?: $config->get('region');
+
+      if (!empty($api_key) && !empty($domain)) {
+        $dsn = sprintf('mailgun+https://api:%s@%s', $api_key, $domain);
+        $dsn_line = '$settings[\'mailer_dsn\'] = \'' . $dsn . '\';';
+
+        $settings_php = DRUPAL_ROOT . '/sites/default/settings.php';
+        $settings_local = DRUPAL_ROOT . '/sites/default/settings.local.php';
+
+        $writable_files = [];
+        if (file_exists($settings_php) && is_writable($settings_php)) {
+          $writable_files[] = 'settings.php';
+        }
+        if (file_exists($settings_local) && is_writable($settings_local)) {
+          $writable_files[] = 'settings.local.php';
+        }
+
+        if (empty($writable_files)) {
+          $this->messenger()->addWarning($this->t('Neither settings.php nor settings.local.php is writable. Please copy and paste the following into one of those files manually:'));
+        } else {
+          $this->messenger()->addStatus($this->t('You can copy the following DSN into %files:', ['%files' => implode(' or ', $writable_files)]));
+        }
+
+        $this->messenger()->addStatus($this->t('<code>@dsn</code>', ['@dsn' => $dsn_line]));
+      }
     }
 
     // Update default mail system setting if checkbox is toggled.
+    $system_mail_config = \Drupal::configFactory()->getEditable('system.mail');
+    $current_default = \Drupal::config('system.mail')->get('interface.default');
+    $mailgun_config = \Drupal::configFactory()->getEditable('mailgun_sender.settings');
+
     if ($form_state->getValue('set_as_default')) {
-      \Drupal::configFactory()->getEditable('system.mail')
-        ->set('interface.default', 'mailgun_sender')
-        ->save();
+      if ($current_default !== 'mailgun_sender') {
+        $mailgun_config->set('previous_mail_interface', $current_default)->save();
+        if ($current_default === 'smtp') {
+          $this->messenger()->addWarning($this->t('PHPMailer SMTP is currently active and will be overridden.'));
+        }
+      }
+
+      $system_mail_config->set('interface.default', 'mailgun_sender')->save();
+      $this->messenger()->addStatus($this->t('Mailgun is now set as the default mail system.'));
+    } else {
+      $previous = \Drupal::config('mailgun_sender.settings')->get('previous_mail_interface') ?? 'php_mail';
+      if ($current_default === 'mailgun_sender') {
+        $system_mail_config->set('interface.default', $previous)->save();
+        $this->messenger()->addStatus($this->t('Mailgun has been unset. Restored previous mail system: @id.', ['@id' => $previous]));
+      }
     }
 
     parent::submitForm($form, $form_state);
@@ -141,7 +184,6 @@ class MailgunSettingsForm extends ConfigFormBase {
       return;
     }
 
-    // Load current saved configuration
     $config = $this->config('mailgun_sender.settings');
     $api_key = $config->get('api_key');
     $domain = $config->get('domain');
