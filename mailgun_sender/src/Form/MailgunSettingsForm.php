@@ -30,6 +30,7 @@ class MailgunSettingsForm extends ConfigFormBase {
     $form['update_api_key'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Update API Key'),
+      '#description' => $this->t('If checked, this allows you to update the API key with a new one.'),
       '#default_value' => FALSE,
       '#ajax' => [
         'callback' => '::toggleApiKeyField',
