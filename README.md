@@ -23,7 +23,7 @@ In order for the Mailgun API to work, the following information is required:
 
 * API key - your sending API key within your Mailgun domain
 * Sending domain - the domain you have configured within Mailgun
-* Region - either EU or US, depending on where you added your domain within Mailgun
+* Region - either :eu: EU or :us: US, depending on where you added your domain within Mailgun
 * From email - the address your email will be sent from
 
 You can also attempt to set Mailgun as the defailt mail backend by checking the box. This does not always work, hence the caution above.
