@@ -3,43 +3,74 @@
 namespace Drupal\mailgun_sender\Plugin\Mail;
 
 use Drupal\Core\Mail\MailInterface;
-use Drupal\Core\Mail\MailFormatHelper;
-use Drupal\mailgun_sender\Service\MailgunService;
-use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
+use Drupal\Core\Mail\Plugin\MailPluginBase;
+use Drupal\Core\Site\Settings;
+use GuzzleHttp\Exception\RequestException;
 
 /**
- * Defines the Mailgun implementation of MailInterface.
+ * Defines the Mailgun Sender mail backend plugin.
  *
  * @Mail(
  *   id = "mailgun_sender",
  *   label = @Translation("Mailgun Sender"),
- *   description = @Translation("Sends email via Mailgun API.")
+ *   description = @Translation("Sends mail via the Mailgun HTTP API.")
  * )
  */
-class MailgunMailPlugin implements MailInterface, ContainerFactoryPluginInterface {
+class MailgunSenderMail extends MailPluginBase implements MailInterface {
 
-  protected $mailgunService;
-
-  public function __construct(MailgunService $mailgun_service) {
-    $this->mailgunService = $mailgun_service;
-  }
-
-  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
-    return new static(
-      $container->get('mailgun_sender.mailgun_service')
-    );
-  }
-
+  /**
+   * {@inheritdoc}
+   */
   public function format(array $message) {
-    $message['body'] = MailFormatHelper::htmlToText($message['body']);
+    // You could customise headers/body here if needed
     return $message;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function mail(array $message) {
-    $to = $message['to'];
-    $subject = $message['subject'];
-    $body = is_array($message['body']) ? implode("\n", $message['body']) : $message['body'];
-    return $this->mailgunService->sendEmail($to, $subject, $body);
+    $config = \Drupal::config('mailgun_sender.settings');
+    $api_key = $config->get('api_key');
+    $domain = $config->get('domain');
+    $region = $config->get('region') ?? 'us';
+
+    if (empty($api_key) || empty($domain)) {
+      \Drupal::logger('mailgun_sender')->error('Missing Mailgun API configuration.');
+      return FALSE;
+    }
+
+    $endpoint = $region === 'eu'
+      ? 'https://api.eu.mailgun.net/v3/' . $domain . '/messages'
+      : 'https://api.mailgun.net/v3/' . $domain . '/messages';
+
+    $params = [
+      'auth' => ['api', $api_key],
+      'form_params' => [
+        'from' => $message['from'],
+        'to' => $message['to'],
+        'subject' => $message['subject'],
+        'text' => is_array($message['body']) ? implode("\n", $message['body']) : $message['body'],
+      ],
+    ];
+
+    try {
+      $client = \Drupal::httpClient();
+      $response = $client->post($endpoint, $params);
+
+      if ($response->getStatusCode() === 200) {
+        \Drupal::logger('mailgun_sender')->info('Email sent to %to via Mailgun.', ['%to' => $message['to']]);
+        return TRUE;
+      }
+      else {
+        \Drupal::logger('mailgun_sender')->error('Mailgun responded with HTTP %code', ['%code' => $response->getStatusCode()]);
+      }
+    }
+    catch (RequestException $e) {
+      \Drupal::logger('mailgun_sender')->error('Mailgun request failed: @error', ['@error' => $e->getMessage()]);
+    }
+
+    return FALSE;
   }
+
 }
