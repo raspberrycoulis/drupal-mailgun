@@ -26,8 +26,6 @@ class MailgunSettingsForm extends ConfigFormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config('mailgun_sender.settings');
-    //$current_default = \Drupal::config('system.mail')->get('interface.default');
-    //$current_default_sender = \Drupal::config('mailsystem.settings')->get('defaults.sender');
 
     $form['update_api_key'] = [
       '#type' => 'checkbox',
@@ -47,9 +45,11 @@ class MailgunSettingsForm extends ConfigFormBase {
     $form['api_key_wrapper']['api_key'] = [
       '#type' => 'password',
       '#title' => $this->t('Mailgun API Key'),
-      '#default_value' => $config->get('api_key'),
+      //'#default_value' => $config->get('api_key'), // Remove if works from fresh
+      '#default_value' => '',
       '#required' => TRUE,
       '#disabled' => !$form_state->getValue('update_api_key'),
+      '#placeholder' => '*****************',
     ];
 
     $form['domain'] = [
@@ -107,9 +107,20 @@ class MailgunSettingsForm extends ConfigFormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $config = $this->config('mailgun_sender.settings');
 
-    if ($form_state->getValue('update_api_key') && !empty($form_state->getValue('api_key'))) {
+    // Remove if works with fresh install
+    /*if ($form_state->getValue('update_api_key') && !empty($form_state->getValue('api_key'))) {
       $config->set('api_key', $form_state->getValue('api_key'));
+    }*/
+
+    if ($form_state->getValue('update_api_key')) {
+      $new_api_key = $form_state->getValue(['api_key_wrapper', 'api_key']);
+      if (!empty($new_api_key)) {
+        $config->set('api_key', $new_api_key);
+      }
     }
+
+    $config->save();
+    parent::submitForm($form, $form_state);
 
     $config
       ->set('domain', $form_state->getValue('domain'))
