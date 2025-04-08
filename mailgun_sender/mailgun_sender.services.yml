@@ -1,0 +1,10 @@
+services:
+  mailgun_sender.mailgun_service:
+    class: Drupal\mailgun_sender\Service\MailgunService
+    arguments: ['@config.factory', '@http_client']
+
+  mailgun_sender.mailgun_mail_plugin:
+    class: Drupal\mailgun_sender\Plugin\Mail\MailgunMailPlugin
+    arguments: ['@mailgun_sender.mailgun_service']
+    tags:
+      - { name: mail.backend, id: mailgun_sender }

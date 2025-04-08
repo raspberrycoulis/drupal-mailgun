@@ -1,0 +1,6 @@
+mailgun_sender.test:
+  title: 'Test Mailgun Email'
+  description: 'Send a test email using the Mailgun API'
+  parent: mailgun_sender.settings
+  route_name: mailgun_sender.test
+  weight: 110

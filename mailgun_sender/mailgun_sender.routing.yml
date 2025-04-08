@@ -1,0 +1,7 @@
+mailgun_sender.settings:
+  path: '/admin/config/system/mailgun-sender'
+  defaults:
+    _form: '\Drupal\mailgun_sender\Form\MailgunSettingsForm'
+    _title: 'Mailgun Settings'
+  requirements:
+    _permission: 'administer site configuration'

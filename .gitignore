@@ -1,0 +1,15 @@
+---
+
+### .gitignore
+
+```gitignore
+# macOS specific files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# Icon files
+Icon?
