@@ -2,6 +2,8 @@
 
 This is a basic Drupal module that is designed to utilse Mailgun's API to send emails.
 
+> :warning: **This is experimental!** Whilst some functionality works, it currently does not change Drupal's default mail backend to use the Mailgun service.
+
 ## What does it do?
 
 In short, this uses Mailgun's API to send emails.
