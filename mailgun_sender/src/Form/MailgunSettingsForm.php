@@ -26,10 +26,8 @@ class MailgunSettingsForm extends ConfigFormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config('mailgun_sender.settings');
-    $current_default = \Drupal::config('system.mail')->get('interface.default');
-    $current_default_sender = \Drupal::config('mailsystem.settings')->get('defaults.sender');
-    dump($current_default);
-    dump($current_default_sender);
+    //$current_default = \Drupal::config('system.mail')->get('interface.default');
+    //$current_default_sender = \Drupal::config('mailsystem.settings')->get('defaults.sender');
 
     $form['update_api_key'] = [
       '#type' => 'checkbox',

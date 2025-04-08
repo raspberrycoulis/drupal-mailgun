@@ -1,0 +1,5 @@
+services:
+  mailgun_sender.drush.commands:
+    class: Drupal\mailgun_sender\Drush\MailgunSenderCommands
+    tags:
+      - { name: drush.command }

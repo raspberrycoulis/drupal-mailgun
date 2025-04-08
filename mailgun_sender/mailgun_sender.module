@@ -1,13 +1,27 @@
 <?php
 
+use Drupal\Core\Routing\RouteMatchInterface;
+
 /**
  * Implements hook_help().
  */
-function mailgun_sender_help($route_name, \Drupal\Core\Routing\RouteMatchInterface $route_match) {
+function mailgun_sender_help($route_name, RouteMatchInterface $route_match) {
   switch ($route_name) {
     case 'mailgun_sender.settings':
       return t('Configure Mailgun email settings including domain, region, and default sender.');
     case 'mailgun_sender.test':
       return t('Use this form to test email sending via the Mailgun API using the configured domain and region.');
+  }
+}
+
+/**
+ * Implements hook_mail().
+ */
+function mailgun_sender_mail($key, &$message, $params) {
+  switch ($key) {
+    case 'test':
+      $message['subject'] = $params['subject'] ?? 'Mailgun Test Email';
+      $message['body'][] = $params['body'] ?? 'This is a test email.';
+      break;
   }
 }
