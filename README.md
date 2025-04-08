@@ -7,7 +7,7 @@ This is a basic Drupal module that is designed to utilise Mailgun's API to send 
 
 ## What does it do?
 
-In short, this uses Mailgun's API to send emails.
+In short, this uses Mailgun's API to send emails. When configured, the module can set Mailgun to be the main mail sending mechanism within Drupal (or restored to the previous configuration) via a simple checkbox. This has been tested with PHPMailer and Symfony.
 
 ## Installation
 
