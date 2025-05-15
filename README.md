@@ -11,7 +11,7 @@ In short, this uses Mailgun's API to send emails. When configured, the module ca
 
 ## Installation
 
-Add the contents of `mailgun_sender` to `/var/www/html/web/modules/custom/` (or wherever the `../web/modules/custom` directory exists on your Drupal instance), then clear Drupal's cache (either via the admin UI or by running `drush cr`)
+Add the contents of `mailgun_sender` to `/var/www/html/web/modules/custom/` (or wherever the `../web/modules/custom` directory exists on your Drupal instance), then clear Drupal's cache (either via the admin UI or by running `drush cr`).
 
 Once installed, a new menu item appears under `Configuration --> System` called `Mailgun settings` where you can set it up.
 
